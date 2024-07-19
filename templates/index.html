@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>Secure Trends</title>
+  <meta content="" name="description">
+  <meta content="" name="keywords">
+
+  <link rel="icon" href="{{ url_for('static', filename='img/Logo.png') }}">
+
+  <link href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i" rel="stylesheet">
+
+  <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/boxicons/css/boxicons.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/quill/quill.snow.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/quill/quill.bubble.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/remixicon/remixicon.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/simple-datatables/style.css') }}" rel="stylesheet">
+
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+  
+  <style>
+    #chartsContainer {
+        display: flex;
+        flex-flow: wrap row;
+        gap: 4em;
+        justify-content: center;
+    }
+
+    canvas {
+        flex: 1 0 auto;
+        max-width: 500px;
+        max-height: 300px;
+    }
+
+    .user-icon {
+        cursor: pointer;
+        margin: 20px;
+    }
+
+    .user-label {
+        text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <header id="header" class="header fixed-top d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center">
+      <a href="{{ url_for('index') }}" class="logo d-flex align-items-center">
+        <img src="{{ url_for('static', filename='img/Logo.png') }}" alt="">
+        <span class="d-none d-lg-block">Secure Trend</span>
+      </a>
+      <i class="bi bi-list toggle-sidebar-btn"></i>
+    </div>
+    <!-- Navbar section -->
+    <div>
+      <ul class="sidebar-nav" id="sidebar-nav">
+        <!-- Existing navbar items -->
+        <!-- Add the "Settings" option to the navbar -->
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('settings') }}">
+            <i class="bi bi-gear"></i>
+            <span>Settings</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </header>
+
+  <aside id="sidebar" class="sidebar">
+    <ul class="sidebar-nav" id="sidebar-nav">
+      <li class="nav-item">
+        <a class="nav-link " href="{{ url_for('index') }}">
+          <i class="bi bi-grid"></i>
+          <span>Dashboard</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link collapsed " href="{{ url_for('report') }}">
+          <i class="bi bi-bar-chart"></i>
+          <span>Reports</span>
+        </a>
+      </li>
+      <li class="nav-heading">Pages</li>
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="{{ url_for('users_profile') }}">
+          <i class="bi bi-person"></i>
+          <span>About</span>
+        </a>
+      </li>
+    </ul>
+  </aside>
+
+  <main id="main" class="main">
+    <div class="pagetitle">
+      <h1>Dashboard</h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Charts</a></li>
+          <li class="breadcrumb-item active">Trends</li>
+        </ol>
+      </nav>
+    </div>
+
+    <div id="chartsContainer">
+      
+    </div>
+
+  </main>
+
+  <a href="#" class="back-to-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const csvUrl = '{{ url_for("static", filename="category_counts_net.csv") }}';
+    
+    fetch(csvUrl)
+        .then(response => response.text())
+        .then(csv => {
+            handleCSVData(csv);
+        })
+        .catch(error => console.error('Error fetching CSV:', error));
+
+    function handleCSVData(csv) {
+        const data = parseCSV(csv);
+        renderGraphs(data);
+    }
+
+    function parseCSV(csv) {
+        const lines = csv.trim().split('\n');
+        const users = {};
+
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].trim().split(',');
+            const userId = values[0];
+            const category = values[1];
+            const count = parseInt(values[2]);
+
+            if (!users[userId]) {
+                users[userId] = { clothing: 0, electronics: 0, vehicles: 0 };
+            }
+
+            switch (category.toLowerCase()) {
+                case 'clothing':
+                    users[userId].clothing += count;
+                    break;
+                case 'electronics':
+                    users[userId].electronics += count;
+                    break;
+                case 'vehicles':
+                    users[userId].vehicles += count;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        return users;
+    }
+
+    function renderGraphs(data) {
+        const chartsContainer = document.getElementById('chartsContainer');
+        chartsContainer.innerHTML = '';
+
+        for (const userId in data) {
+            // Create a user icon to show/hide their chart
+            const userIcon = document.createElement('i');
+            userIcon.classList.add('bi', 'bi-person', 'user-icon');
+            userIcon.dataset.userId = userId;
+            userIcon.addEventListener('click', function() {
+                const existingCanvas = chartsContainer.querySelector(`canvas[data-user-id="${userId}"]`);
+                
+                if (existingCanvas) {
+                    existingCanvas.remove();
+                    const existingLabel = chartsContainer.querySelector(`div[data-user-id="${userId}"]`);
+                    if (existingLabel) {
+                        existingLabel.remove();
+                    }
+                } else {
+                    const canvas = document.createElement('canvas');
+                    canvas.dataset.userId = userId;
+                    canvas.width = 400;
+                    canvas.height = 200;
+                    chartsContainer.appendChild(canvas);
+
+                    const ctx = canvas.getContext('2d');
+                    const myChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Clothing', 'Electronics', 'Vehicles'],
+                            datasets: [{
+                                label: `User ${userId} Data`,
+                                data: [data[userId].clothing, data[userId].electronics, data[userId].vehicles],
+                                backgroundColor: ['#ff6384', '#36a2eb', '#ffce56'],
+                                borderColor: '#ffffff',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                yAxes: [{
+                                    ticks: {
+                                        beginAtZero: true
+                                    }
+                                }]
+                            }
+                        }
+                    });
+
+                    // Add label below the chart icon
+                    const userLabel = document.createElement('div');
+                    userLabel.classList.add('user-label');
+                    userLabel.dataset.userId = userId;
+                    userLabel.textContent = `User ${userId}`;
+                    chartsContainer.appendChild(userLabel);
+                }
+            });
+
+            chartsContainer.appendChild(userIcon);
+        }
+    }
+  </script>
+</body>
+
+</html>

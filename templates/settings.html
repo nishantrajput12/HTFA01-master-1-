@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>Secure Trends - Settings</title>
+  <meta content="" name="description">
+  <meta content="" name="keywords">
+
+  <link rel="icon" href="{{ url_for('static', filename='img/Logo.png') }}">
+
+  <link href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i" rel="stylesheet">
+
+  <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/boxicons/css/boxicons.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/quill/quill.snow.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/quill/quill.bubble.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/remixicon/remixicon.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/simple-datatables/style.css') }}" rel="stylesheet">
+
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+
+  <style>
+    /* Add your custom styles here */
+    #popupMessage {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px;
+      background-color: white;
+      border: 1px solid #ccc;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+    #popupOverlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+  </style>
+
+</head>
+
+<body>
+  <header id="header" class="header fixed-top d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center">
+      <a href="{{ url_for('index') }}" class="logo d-flex align-items-center">
+        <img src="{{ url_for('static', filename='img/Logo.png') }}" alt="">
+        <span class="d-none d-lg-block">Secure Trend</span>
+      </a>
+      <i class="bi bi-list toggle-sidebar-btn"></i>
+    </div>
+    <!-- Navbar section -->
+    <div>
+      <ul class="sidebar-nav" id="sidebar-nav">
+        <!-- Existing navbar items -->
+        <!-- Add the "Settings" option to the navbar -->
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('settings') }}">
+            <i class="bi bi-gear"></i>
+            <span>Settings</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </header>
+
+  <aside id="sidebar" class="sidebar">
+    <ul class="sidebar-nav" id="sidebar-nav">
+      <li class="nav-item">
+        <a class="nav-link " href="{{ url_for('index') }}">
+          <i class="bi bi-grid"></i>
+          <span>Dashboard</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link collapsed " href="{{ url_for('report') }}">
+          <i class="bi bi-bar-chart"></i>
+          <span>Reports</span>
+        </a>
+      </li>
+      <li class="nav-heading">Pages</li>
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="{{ url_for('users_profile') }}">
+          <i class="bi bi-person"></i>
+          <span>About</span>
+        </a>
+      </li>
+  </aside>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-md-6 offset-md-3 mt-5">
+        <br>
+        <h2 class="text-center mb-4">Settings</h2>
+        <form id="settingsForm" method="POST" action="{{ url_for('settings') }}" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label for="clusters" class="form-label">Number of Clusters:</label>
+            <input type="number" class="form-control" id="clusters" name="clusters" value="5" min="1">
+          </div>
+          <div class="mb-3">
+            <label for="newUser" class="form-label">New User:</label>
+            <input type="text" class="form-control" id="newUser" name="newUser" placeholder="Enter new user's name">
+          </div>
+          <div class="mb-3">
+            <label for="userFile" class="form-label">Upload User Data (CSV/PDF):</label>
+            <input type="file" class="form-control" id="userFile" name="userFile" accept=".csv, .pdf">
+          </div>
+          <div class="text-center">
+            <button type="submit" class="btn btn-primary">Update</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="popupOverlay"></div>
+  <div id="popupMessage">
+    <p>Settings updated successfully!</p>
+    <button onclick="closePopup()">Close</button>
+  </div>
+
+  <script>
+    document.getElementById('settingsForm').addEventListener('submit', function(event) {
+      event.preventDefault(); // Prevent the default form submission
+      var form = this;
+      var formData = new FormData(form);
+
+      fetch(form.action, {
+        method: 'POST',
+        body: formData
+      }).then(response => {
+        if (response.ok) {
+          showPopup();
+        } else {
+          alert('Failed to update settings');
+        }
+      }).catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred');
+      });
+    });
+
+    function showPopup() {
+      document.getElementById('popupOverlay').style.display = 'block';
+      document.getElementById('popupMessage').style.display = 'block';
+    }
+
+    function closePopup() {
+      document.getElementById('popupOverlay').style.display = 'none';
+      document.getElementById('popupMessage').style.display = 'none';
+    }
+  </script>
+
+</body>
+
+</html>

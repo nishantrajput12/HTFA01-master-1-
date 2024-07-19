@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>Secure Trends</title>
+  <meta content="" name="description">
+  <meta content="" name="keywords">
+
+  <link rel="icon" href="{{ url_for('static', filename='img/Logo.png') }}">
+
+  <link href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i" rel="stylesheet">
+
+  <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/boxicons/css/boxicons.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/quill/quill.snow.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/quill/quill.bubble.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/remixicon/remixicon.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/simple-datatables/style.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+  
+  <title>CSV Data Graph and Table</title>
+  <!-- Import Chart.js library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Import html2canvas and jsPDF libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.0.0-rc.7/dist/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 20px;
+    }
+    th, td {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+    
+    .cluster-header {
+        background-color: #36a2eb;
+        color: white;
+    }
+    .cluster-odd {
+        background-color: #e9e9e9;
+    }
+    .cluster-even {
+        background-color: #f5f5f5;
+    }
+
+    #chartsContainer {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1em;
+        margin-bottom: 20px; /* Add space between charts and table */
+    }
+
+    canvas {
+        max-width: 500px;
+        max-height: 300px;
+    }
+
+    #dataTable {
+        margin-top: 20px; /* Add space between charts and table */
+    }
+    #dataTable {
+        margin: 20px auto; /* Center the table horizontally */
+        width: 45%; /* Adjust width as per your design */
+    }
+
+    #downloadButton {
+        margin-top: 20px;
+        width: 20%;
+        margin-left: 40%;
+    }
+  </style>
+</head>
+
+<body>
+  <header id="header" class="header fixed-top d-flex align-items-center">
+    <div class="d-flex align-items-center justify-content-between">
+      <a href="{{ url_for('index') }}" class="logo d-flex align-items-center">
+        <img src="{{ url_for('static', filename='img/Logo.png') }}" alt="">
+        <span class="d-none d-lg-block">Secure Trend</span>
+      </a>
+      <i class="bi bi-list toggle-sidebar-btn"></i>
+    </div>
+  </header>
+
+  <aside id="sidebar" class="sidebar">
+    <ul class="sidebar-nav" id="sidebar-nav">
+      <li class="nav-item">
+        <a class="nav-link collapsed " href="{{ url_for('index') }}">
+          <i class="bi bi-grid"></i>
+          <span>Dashboard</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link " href="{{ url_for('index') }}">
+          <i class="bi bi-bar-chart"></i>
+          <span>Reports</span>
+        </a>
+      </li>
+      <li class="nav-heading">Pages</li>
+      <li class="nav-item">
+        <a class="nav-link collapsed" href="{{ url_for('users_profile') }}">
+          <i class="bi bi-person"></i>
+          <span>About</span>
+        </a>
+      </li>
+    </ul>
+  </aside>
+
+  <main id="main" class="main">
+    <div class="pagetitle">
+      <h1>Dashboard</h1>
+      <nav>
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Charts</a></li>
+          <li class="breadcrumb-item active">UserCategories</li>
+        </ol>
+      </nav>
+    </div>
+
+    <div id="chartsContainer"></div>
+    <div id="dataTable"></div>
+
+    <button id="downloadButton" class="btn btn-primary">Download Report as PDF</button>
+
+    <script>
+      // URL of the CSV file
+      const csvUrl = "{{ url_for('static', filename='clustering_result.csv') }}";
+
+      // Predefined colors for clusters
+      const clusterColors = ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40', '#33cc33', '#ff6633'];
+
+      // Fetch CSV data
+      fetch(csvUrl)
+          .then(response => response.text())
+          .then(csv => {
+              handleCSVData(csv);
+          })
+          .catch(error => console.error('Error fetching CSV:', error));
+
+      // Function to parse CSV data and populate table
+      function handleCSVData(csv) {
+          const data = parseCSV(csv);
+          populateTable(data);
+          renderGraphs(data);
+      }
+
+      // Function to parse CSV data
+      function parseCSV(csv) {
+          const lines = csv.trim().split('\n');
+          const clusters = {};
+
+          for (let i = 1; i < lines.length; i++) {
+              const values = lines[i].trim().split(',');
+              const userId = values[0];
+              const cluster = parseInt(values[1]);
+
+              if (!clusters[cluster]) {
+                  clusters[cluster] = [];
+              }
+
+              // Add user to cluster
+              clusters[cluster].push(`User ${userId}`);
+          }
+
+          return clusters;
+      }
+
+      // Function to populate table with data
+      function populateTable(data) {
+          const dataTable = document.getElementById('dataTable');
+          const clusterCount = Object.keys(data).length;
+          const maxClusterSize = Math.max(...Object.values(data).map(cluster => cluster.length));
+
+          // Create table header
+          const headerRow = document.createElement('tr');
+          for (const cluster in data) {
+              const clusterHeaderCell = document.createElement('th');
+              clusterHeaderCell.textContent = `Cluster ${cluster}`;
+              clusterHeaderCell.className = 'cluster-header';
+              headerRow.appendChild(clusterHeaderCell);
+          }
+          dataTable.appendChild(headerRow);
+
+          // Populate table body
+          for (let i = 0; i < maxClusterSize; i++) {
+              const row = document.createElement('tr');
+              row.className = i % 2 === 0 ? 'cluster-even' : 'cluster-odd';
+              for (const cluster in data) {
+                  const usersInCluster = data[cluster];
+                  const userIdCell = document.createElement('td');
+                  if (i < usersInCluster.length) {
+                      userIdCell.textContent = usersInCluster[i];
+                  }
+                  row.appendChild(userIdCell);
+              }
+              dataTable.appendChild(row);
+          }
+      }
+
+      // Function to render graphs using Chart.js
+      function renderGraphs(data) {
+          const chartsContainer = document.getElementById('chartsContainer');
+          chartsContainer.innerHTML = '';
+
+          const canvas = document.createElement('canvas');
+          canvas.width = 400;
+          canvas.height = 200;
+          chartsContainer.appendChild(canvas);
+
+          const ctx = canvas.getContext('2d');
+          const myChart = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                  labels: Object.keys(data).map(cluster => `Cluster ${cluster}`),
+                  datasets: [{
+                      label: 'Number of Users',
+                      data: Object.values(data).map(cluster => cluster.length),
+                      backgroundColor: clusterColors, // Use predefined colors
+                      borderColor: '#ffffff',
+                      borderWidth: 1
+                  }]
+              },
+              options: {
+                  scales: {
+                      yAxes: [{
+                          scaleLabel: {
+                              display: true,
+                              labelString: 'Number of Users'
+                          },
+                          ticks: {
+                              beginAtZero: true
+                          }
+                      }],
+                      xAxes: [{
+                          scaleLabel: {
+                              display: true,
+                              labelString: 'Cluster'
+                          }
+                      }]
+                  }
+              }
+          });
+      }
+
+      document.getElementById('downloadButton').addEventListener('click', function () {
+          const { jsPDF } = window.jspdf;
+
+          html2canvas(document.body).then(canvas => {
+              const imgData = canvas.toDataURL('image/png');
+              const pdf = new jsPDF('p', 'mm', 'a4');
+              const imgProps = pdf.getImageProperties(imgData);
+              const pdfWidth = pdf.internal.pageSize.getWidth();
+              const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+              pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+              pdf.save('report.pdf');
+          });
+      });
+    </script>
+
+  </main>
+
+  <a href="#" class="back-to-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</body>
+
+</html>
