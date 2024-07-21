@@ -62,7 +62,7 @@ def process_user_data(input_folder, output_folder, user_id):
 
     # Save the results to a CSV file with 'User_id' column as the first column
     result_df.to_csv(output_file, index=False)
-
+#Client Federation
 def client_federation():
     category_mapping = {
         'shirt': 'Clothing', 'jeans': 'Clothing', 'pants': 'Clothing', 'kurta': 'Clothing', 'salwar': 'Clothing',
